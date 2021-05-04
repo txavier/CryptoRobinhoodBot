@@ -18,12 +18,20 @@ To Install:
 git clone https://github.com/2018kguo/RobinhoodBot.git
 cd RobinhoodBot/
 pip install -r requirements.txt
-cp config.py.sample config.py # add auth info after copying
+cp config.py.sample config.py # add auth info and watchlist name to monitor after copying
 ```
 
 To Run:
+In RobinHood create a watchlist named "Exclusion".  This will be the watchlist that you will use to tell the bot to ignore the stock tickers contained within.
 
 ```python
 cd RobinboodBot/robinhoodbot (If outside of root directory)
 python3 main.py
+```
+
+To loop: 1 once an hour
+
+```python
+cd RobinboodBot/robinhoodbot (If outside of root directory)
+./run.sh # uses bash
 ```
