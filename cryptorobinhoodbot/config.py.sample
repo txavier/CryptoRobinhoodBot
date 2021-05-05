@@ -28,3 +28,5 @@ min_volume=1000000
 min_market_cap=400000
 # Reset the watchlist every week.  Useful for keeping the number of api requests low.
 reset_watchlist=False
+investment_limit_enabled=False
+investment_limit=100

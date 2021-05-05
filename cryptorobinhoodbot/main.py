@@ -94,6 +94,8 @@ def get_portfolio_symbols():
     for item in holdings_data:
         if not item:
             continue
+        if float(item["quantity"]) == 0:
+            continue
         symbol = item["currency"]["code"]
         symbols.append(symbol)
     return symbols
@@ -335,11 +337,11 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
     buying_power = pheonix_account['account_buying_power']['amount']
 
     # Set the limit on how much crypto we're buying.
-    if (investment_limit_enabled):
+    if (investment_limit_enabled and float(buying_power) > float(investment_limit)):
         buying_power = investment_limit
         
-    portfolio_value = float(buying_power)
-    cash = float(buying_power)
+    portfolio_value = float(buying_power) - cash
+    # cash = float(buying_power)
 
     order_placed = False
     len_potential_buys = len(potential_buys)
