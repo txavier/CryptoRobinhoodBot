@@ -307,7 +307,7 @@ def sell_holdings(symbol, holdings_data):
         r.order_sell_crypto_by_quantity(symbol, shares_owned)
     print("####### Selling " + str(shares_owned) +
           " shares of " + symbol + " #######")
-    send_text("SELL: \nSelling " + str(shares_owned) + " shares of " + symbol)
+    # send_text("SELL: \nSelling " + str(shares_owned) + " shares of " + symbol)
 
 
 def buy_holdings(potential_buys, profile_data, holdings_data):
@@ -368,7 +368,7 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
         print("####### Buying " + str(num_shares) +
               " shares of " + potential_buys[i] + " #######")
 
-        send_text("Attempting to buy " + potential_buys[i])
+        # send_text("Attempting to buy " + potential_buys[i])
 
         message = "BUY: \nBuying " + str(num_shares) + " shares of " + potential_buys[i]
 
@@ -377,7 +377,7 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
             if 'detail' in result:
                 message = message +  ". The result is " + result['detail']
         order_placed = True
-        send_text(message)
+        # send_text(message)
     return order_placed
 
 def is_market_in_uptrend():
