@@ -307,7 +307,7 @@ def sell_holdings(symbol, holdings_data):
         r.order_sell_crypto_by_quantity(symbol, shares_owned)
     print("####### Selling " + str(shares_owned) +
           " shares of " + symbol + " #######")
-    # send_text("SELL: \nSelling " + str(shares_owned) + " shares of " + symbol)
+    send_text("SELL: \nSelling " + str(shares_owned) + " shares of " + symbol)
 
 
 def buy_holdings(potential_buys, profile_data, holdings_data):
@@ -377,37 +377,35 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
             if 'detail' in result:
                 message = message +  ". The result is " + result['detail']
         order_placed = True
-        # send_text(message)
+        send_text(message)
     return order_placed
 
 def is_market_in_uptrend():
-    return True 
-
-    # stockTickerNdaq = 'NDAQ'
-    # stockTickerDow = 'DIA'
-    # stockTickerSP = 'SPY'
-    # uptrendNdaq = False
-    # uptrendDow = False
-    # uptrendSp = False
-    # # Nasdaq
-    # # Using NasDaq as the market uptrend indicator which does not have extended trading hours.
-    # today_history = r.get_crypto_historicals(stockTickerNdaq, interval='15second', span='day')    
-    # if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
-    #     uptrendNdaq = True
-    # # DOW
-    # # Using Dow as the market uptrend indicator.
-    # today_history = r.get_stock_historicals(stockTickerDow, interval='5minute', span='day', bounds='regular')    
-    # if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
-    #     uptrendDow = True
-    # # S&P Index
-    # # Using S&P as the market uptrend indicator.
-    # # day_trades = r.get_day_trades()
-    # today_history = r.get_stock_historicals(stockTickerSP, interval='5minute', span='day', bounds='regular')    
-    # if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
-    #     uptrendSp = True
+    stockTickerNdaq = 'NDAQ'
+    stockTickerDow = 'DIA'
+    stockTickerSP = 'SPY'
+    uptrendNdaq = False
+    uptrendDow = False
+    uptrendSp = False
+    # Nasdaq
+    # Using NasDaq as the market uptrend indicator which does not have extended trading hours.
+    today_history = r.get_stock_historicals(stockTickerNdaq, interval='5minute', span='day', bounds='regular')    
+    if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
+        uptrendNdaq = True
+    # DOW
+    # Using Dow as the market uptrend indicator.
+    today_history = r.get_stock_historicals(stockTickerDow, interval='5minute', span='day', bounds='regular')    
+    if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
+        uptrendDow = True
+    # S&P Index
+    # Using S&P as the market uptrend indicator.
+    # day_trades = r.get_day_trades()
+    today_history = r.get_stock_historicals(stockTickerSP, interval='5minute', span='day', bounds='regular')    
+    if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
+        uptrendSp = True
     
-    # result = (uptrendNdaq + uptrendDow + uptrendSp) >= 2
-    # return result
+    result = (uptrendNdaq + uptrendDow + uptrendSp) >= 2
+    return result
 
 def get_accurate_gains(portfolio_symbols, watchlist_symbols):
     '''
@@ -866,22 +864,25 @@ def scan_stocks():
                             # meaning we have less of a chance of the stock showing a 
                             # death cross soon then buy.
                             if(float(cross[2]) > float(cross[3])):
-                                if(market_uptrend):
-                                    # Only buy crypto after stock market hours.
-                                    begin_time = datetime.time(9, 30)
-                                    end_time = datetime.time(16, 30)
-                                    timenow = datetime.datetime.now().time()
+                                # Only buy crypto after stock market hours.
+                                begin_time = datetime.time(9, 30)
+                                end_time = datetime.time(16, 30)
+                                timenow = datetime.datetime.now().time()
+                                weekno = datetime.datetime.today().weekday()
 
-                                    if(not (timenow >= begin_time and timenow < end_time)):
-                                    # day_trades = r.get_day_trades()['equity_day_trades']
-                                    # if len(day_trades) <= 1:
-                                        potential_buys.append(symbol)
-                                    # else:
-                                    #     print("Unable to buy " + symbol + " because there are " + str(len(day_trades)) + " day trades.")
-                                    else:
-                                        print("Unable to buy during while the stock market is open.")
+                                # If we are outside of market hours or if we are in market
+                                # hours but the stock market is not in an uptrend or 
+                                # if today is the weekend.
+                                if(not (timenow >= begin_time and timenow < end_time) or 
+                                (timenow >= begin_time and timenow < end_time  and not market_uptrend and not only_invest_when_stock_market_is_closed) or
+                                (weekno > 4)):
+                                # day_trades = r.get_day_trades()['equity_day_trades']
+                                # if len(day_trades) <= 1:
+                                    potential_buys.append(symbol)
+                                # else:
+                                #     print("Unable to buy " + symbol + " because there are " + str(len(day_trades)) + " day trades.")
                                 else:
-                                    print("But the markets on average are not in an uptrend.")
+                                    print("Unable to buy during while the stock market is open or when the stock market is open but is in an uptrend or if today is not the weekend.")
                             else:
                                 print("But the price is lower than it was 25 minutes ago.")
                         else:
