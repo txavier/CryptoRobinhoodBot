@@ -30,3 +30,5 @@ min_market_cap=400000
 reset_watchlist=False
 investment_limit_enabled=False
 investment_limit=100
+# Only invest when the stock market is not in an uptrend or is closed.
+only_invest_when_stock_market_is_closed=False
