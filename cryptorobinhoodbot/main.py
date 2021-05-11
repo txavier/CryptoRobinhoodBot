@@ -147,12 +147,8 @@ def get_modified_holdings():
         the same dict from r.build_holdings, but with an extra key-value pair for each
         position you have, which is 'bought_at': (the time the stock was purchased)
     """
-    # holdings = r.build_holdings()
     holdings_data = r.get_crypto_positions()
-    # for symbol, dict in holdings.items():
-    #     bought_at = get_position_creation_date(symbol, holdings_data)
-    #     bought_at = str(pd.to_datetime(bought_at))
-    #     holdings[symbol].update({'bought_at': bought_at})
+    
     return holdings_data
 
 
@@ -200,44 +196,6 @@ def get_last_crossing(df, days, symbol="", direction=""):
     else:
         return 0,0,0
 
-
-def five_year_check(stockTicker):
-    """Figure out if a stock has risen or been created within the last five years.
-
-    Args:
-        stockTicker(str): Symbol of the stock we're querying
-
-    Returns:
-        True if the stock's current price is higher than it was five years ago, or the stock IPO'd within the last five years
-        False otherwise
-    """
-    return true
-
-    # instrument = r.get_instruments_by_symbols(stockTicker)
-    # if(len(instrument) == 0):
-    #     return False
-
-    # list_date = instrument[0].get("list_date")
-    # # If there is no list date then assume that the stocks list date data
-    # # is just missing i.e. NNOX
-    # if list_date == None:
-    #     return True
-    # if ((pd.Timestamp("now") - pd.to_datetime(list_date)) < pd.Timedelta("5 Y")):
-    #     return True
-    # fiveyear = r.get_stock_historicals(
-    #     stockTicker, interval='day', span='5year', bounds='regular')
-    # closingPrices = []
-    # for item in fiveyear:
-    #     closingPrices.append(float(item['close_price']))
-    # recent_price = closingPrices[len(closingPrices) - 1]
-    # oldest_price = closingPrices[0]
-    # # if(recent_price <= oldest_price and verbose == True):
-    # #     print("The stock " + stockTicker + " IPO'd, more than 5 years ago, on " + list_date +
-    # #           " with a price 5 years ago of " + str(oldest_price) +
-    # #           " and a current price of " + str(recent_price) + "\n")
-    # return (recent_price > oldest_price)
-
-
 def golden_cross(stockTicker, n1, n2, days, direction=""):
     """Determine if a golden/death cross has occured for a specified stock in the last X trading days
 
@@ -258,10 +216,6 @@ def golden_cross(stockTicker, n1, n2, days, direction=""):
     """
     """ Apparently 5 year historicals are no longer available with hourly intervals.  Only with day intervals now.
     """
-    # yearCheck = five_year_check(stockTicker)
-
-    # if(direction == "above" and not yearCheck):
-    #     return False,0,0
 
     history = r.get_crypto_historicals(stockTicker, interval='5minute', span='day')
     closingPrices = []
@@ -275,16 +229,12 @@ def golden_cross(stockTicker, n1, n2, days, direction=""):
     dates = pd.to_datetime(dates)
     sma1 = t.trend.ema_indicator(price, n=int(n1), fillna=True)
     sma2 = t.trend.ema_indicator(price, n=int(n2), fillna=True)
-    # sma3 = t.volatility.bollinger_mavg(price, n=21, fillna=False)
-    # sma4 = t.volatility.bollinger_mavg(price, n=50, fillna=False)
     series = [price.rename("Price"), sma1.rename(
         "Indicator1"), sma2.rename("Indicator2"), dates.rename("Dates")]
     df = pd.concat(series, axis=1)
     cross = get_last_crossing(df, days, symbol=stockTicker, direction=direction)
     
     if(plot):
-        # show_plot(price, sma1, sma2, sma3, sma4, dates, symbol=stockTicker,
-        #           label1=str(n1)+" day SMA", label2=str(n2)+" day SMA", label3="21 day SMA", label4="50 day SMA")
         show_plot(price, sma1, sma2, dates, symbol=stockTicker,
                   label1=str(n1)+" day SMA", label2=str(n2)+" day SMA")
     return cross[0], cross[1], cross[2], history[len(history)-5]['close_price']
@@ -327,13 +277,9 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
     """
     # The below line was commented out and replaced because it inexplicably started 
     # returning seeminly random negative numbers.
-    # cash = float(profile_data.get('cash'))
     pheonix_account = r.load_phoenix_account()
     cash = float(pheonix_account['withdrawable_cash']['amount'])
     portfolio_value = float(profile_data.get('equity')) - cash
-    # The below line seemed to no longer work.  In my account I had $3 and the 
-    # commented out function reported a sum of $145.
-    # buying_power = r.load_account_profile(info='buying_power')
     buying_power = pheonix_account['account_buying_power']['amount']
 
     # Set the limit on how much crypto we're buying.
@@ -341,7 +287,6 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
         buying_power = investment_limit
         
     portfolio_value = float(buying_power) - cash
-    # cash = float(buying_power)
 
     order_placed = False
     len_potential_buys = len(potential_buys)
@@ -367,8 +312,6 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
             continue
         print("####### Buying " + str(num_shares) +
               " shares of " + potential_buys[i] + " #######")
-
-        # send_text("Attempting to buy " + potential_buys[i])
 
         message = "BUY: \nBuying " + str(num_shares) + " shares of " + potential_buys[i]
 
@@ -399,135 +342,12 @@ def is_market_in_uptrend():
         uptrendDow = True
     # S&P Index
     # Using S&P as the market uptrend indicator.
-    # day_trades = r.get_day_trades()
     today_history = r.get_stock_historicals(stockTickerSP, interval='5minute', span='day', bounds='regular')    
     if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
         uptrendSp = True
     
     result = (uptrendNdaq + uptrendDow + uptrendSp) >= 2
     return result
-
-def get_accurate_gains(portfolio_symbols, watchlist_symbols):
-    '''
-    Robinhood includes dividends as part of your net gain. This script removes
-    dividends from net gain to figure out how much your stocks/options have paid
-    off.
-    Note: load_portfolio_profile() contains some other useful breakdowns of equity.
-    Print profileData and see what other values you can play around with.
-    '''
-
-    profileData = r.load_portfolio_profile()
-    allTransactions = r.get_bank_transfers()
-    cardTransactions= r.get_card_transactions()
-
-    deposits = sum(float(x['amount']) for x in allTransactions if (x['direction'] == 'deposit') and (x['state'] == 'completed'))
-    withdrawals = sum(float(x['amount']) for x in allTransactions if (x['direction'] == 'withdraw') and (x['state'] == 'completed'))
-    debits = sum(float(x['amount']['amount']) for x in cardTransactions if (x['direction'] == 'debit' and (x['transaction_type'] == 'settled')))
-    reversal_fees = sum(float(x['fees']) for x in allTransactions if (x['direction'] == 'deposit') and (x['state'] == 'reversed'))
-
-    money_invested = deposits + reversal_fees - (withdrawals - debits)
-    dividends = r.get_total_dividends()
-    percentDividend = 0
-    if not money_invested == 0:
-        percentDividend = dividends/money_invested*100
-
-    equity_amount = float(profileData['equity'])
-    buying_power = float(profileData['equity']) - float(profileData['market_value'])
-    totalGainMinusDividends = equity_amount - dividends - money_invested
-    percentGain = totalGainMinusDividends/money_invested*100
-
-    bankTransfered = "The total money invested is ${:.2f}".format(money_invested)
-    equity = "The total equity is ${:.2f}".format(equity_amount)
-    withdrawable_amount = "The buying power is ${:.2f}".format(buying_power)
-    equityAndWithdrawable = "The total account value of ${:.2f}".format(float(equity_amount))
-    dividendIncrease = "The net worth has increased {:0.3f}% due to dividends that amount to ${:0.2f}".format(percentDividend, dividends)
-    gainIncrease = "The net worth has increased {:0.3f}% due to other gains that amount to ${:0.2f}".format(percentGain, totalGainMinusDividends)
-
-    print(bankTransfered)
-    print(equity)
-    print(withdrawable_amount)
-    print(equityAndWithdrawable)
-    print(dividendIncrease)
-    print(gainIncrease)
-    
-    """ Send a text message with the days metrics """
-
-    # if debug: 
-        # print("----- Scanning market reports to add cryptos to watchlist -----")
-        # # market_tag_report = get_market_tag_stocks_report()
-        # # If the market tag report has some stock values...
-        # if market_tag_report[0] != '':
-        #     send_text(market_tag_report[0])
-        #     if market_report_auto_invest:
-        #         auto_invest(market_tag_report[1], portfolio_symbols, watchlist_symbols)
-        # print("----- End market reports scan -----")
-
-    # Evening Morning report
-    begin_time = datetime.time(8, 30)
-    end_time = datetime.time(9, 30)
-    timenow = datetime.datetime.now().time()
-
-    if(timenow >= begin_time and timenow < end_time):
-        print("Sending morning report.")
-        send_text(bankTransfered + "\n" + withdrawable_amount)
-        time.sleep(2)
-        send_text(equity)      
-        time.sleep(2)
-        send_text(equityAndWithdrawable + "\n" + gainIncrease)
-        # Get interesting stocks report.
-        # market_tag_report = get_market_tag_stocks_report()
-        if market_tag_report[0] != '':
-            # If the market tag report has some stock values...
-            send_text(market_tag_report[0])
-            if market_report_auto_invest:
-                auto_invest(market_tag_report[1], portfolio_symbols, watchlist_symbols)
-
-    # Evening report
-    begin_time = datetime.time(17, 30)
-    end_time = datetime.time(18, 30)
-
-    if(timenow >= begin_time and timenow < end_time):
-        print("Sending evening report.")
-        send_text(bankTransfered + "\n" + withdrawable_amount)
-        time.sleep(2)
-        send_text(equity)      
-        time.sleep(2)
-        send_text(equityAndWithdrawable + "\n" + gainIncrease)
-        # Get interesting stocks report.
-        # market_tag_report = get_market_tag_stocks_report()
-        # if market_tag_report[0] != '':
-        #     # If the market tag report has some stock values...
-        #     send_text(market_tag_report[0])
-        #     if market_report_auto_invest:
-        #         auto_invest(market_tag_report[1], portfolio_symbols, watchlist_symbols)
-
-    # Morning auto-invest
-    begin_time = datetime.time(10, 00)
-    end_time = datetime.time(11, 00)
-    timenow = datetime.datetime.now().time()
-          
-    # if(timenow >= begin_time and timenow < end_time):
-    #     print("----- Scanning market reports to add cryptos to watchlist -----")
-    #     # market_tag_report = get_market_tag_stocks_report()
-    #     # If the market tag report has some stock values...
-    #     if market_tag_report[0] != '':
-    #         if market_report_auto_invest:
-    #             auto_invest(market_tag_report[1], portfolio_symbols, watchlist_symbols)
-    #     print("----- End market reports scan -----")    
-
-    # Afternoon auto-invest
-    begin_time = datetime.time(13, 00)
-    end_time = datetime.time(14, 00)
-    timenow = datetime.datetime.now().time()
-          
-    if(timenow >= begin_time and timenow < end_time):
-        print("----- Scanning market reports to add cryptos to watchlist -----")
-        # market_tag_report = get_market_tag_stocks_report()
-        # If the market tag report has some stock values...
-        # if market_tag_report[0] != '':
-        #     if market_report_auto_invest:
-        #         auto_invest(market_tag_report[1], portfolio_symbols, watchlist_symbols)
-        # print("----- End market reports scan -----") 
 
 def sudden_drop(symbol, percent, hours_apart):
     """ Return true if the price drops more than the percent argument in the span of two hours.
@@ -552,118 +372,6 @@ def sudden_drop(symbol, percent, hours_apart):
     
     return False
 
-def auto_invest(stock_array, portfolio_symbols, watchlist_symbols):
-    return 
-    # try:
-    #     invest = True
-
-    #     # If the previous stock that we added to the watchlist is still here
-    #     # or the stock is in an exclusion list if one has been set
-    #     # then dont auto invest any other stocks for now to prevent just adding
-    #     # all cryptos to the investment pool thus diluting the investment potential
-    #     # in the previous stock that has been autoinvested.
-    #     exclusion_list = r.get_watchlist_by_name(name=auto_invest_exclusion_watchlist)
-    #     stock_array_copy = stock_array.copy()
-    #     for stock in stock_array:
-    #         removed = False
-    #         if (stock in portfolio_symbols):
-    #             # The code below was meant to prevent too many purchases of stock in the hopes
-    #             # but this has now been commented out in the hopes of experiementing with the
-    #             # benefits of multiple investments.
-    #             # invest = False
-    #             # message_skip = stock + " is still in the recomended list. Auto-Invest will skip this interval in order to allow time between stock generation."
-    #             # print(message_skip)
-    #             # send_text(message_skip)
-    #             if (stock in stock_array_copy):
-    #                 stock_array_copy.remove(stock)
-    #                 removed = True
-    #                 print(stock + " removed from auto-invest because it is already in the portfolio.")
-    #         if (use_exclusion_watchlist):
-    #             for exclusion_result in exclusion_list['results']:
-    #                 if (stock == exclusion_result['symbol']):
-    #                     if (stock in stock_array_copy):
-    #                         stock_array_copy.remove(stock)
-    #                         removed = True
-    #                         print(stock + " removed from auto-invest because it was in the exclusion list.")
-    #         if (stock in watchlist_symbols):
-    #             if stock in stock_array_copy:
-    #                 stock_array_copy.remove(stock)
-    #                 removed = True
-    #                 print(stock + " removed from auto-invest because it is already in the watchlist.")
-    #         if (not removed):
-    #             # If this stock is untradeable on the robin hood platform
-    #             # take it out of the list of stocks under consideration.
-    #             stock_info = r.get_instruments_by_symbols(stock)
-    #             if (not stock_info[0]['tradeable']):
-    #                 if stock in stock_array_copy:
-    #                     stock_array_copy.remove(stock)
-    #                     removed = True
-    #                     print(stock + " removed from auto-invest because RobinHood has marked this stock as untradeable.")
-    #         fundamentals = r.get_fundamentals(stock)
-    #         if (not removed):
-    #             average_volume = float(fundamentals[0]['average_volume'])
-    #             if(average_volume < min_volume):
-    #                 if stock in stock_array_copy:
-    #                     stock_array_copy.remove(stock)
-    #                     removed = True
-    #                     print(stock + " removed from auto-invest because the average volume of this stock is less than " + str(min_volume) + ".")
-    #         if (not removed):
-    #             market_cap = float(fundamentals[0]['market_cap'])
-    #             if(market_cap < min_market_cap):
-    #                 if stock in stock_array_copy:
-    #                     stock_array_copy.remove(stock)
-    #                     removed = True
-    #                     print(stock + " removed from auto-invest because the market cap of this stock is less than " + str(min_market_cap) + ".")
-    #         if (not removed and use_price_cap):
-    #             # If a price cap has been set remove any stocks
-    #             # that go above the cap or if the stock does not have
-    #             # any history for today.
-    #             history = r.get_crypto_historicals(stock, interval='day')
-    #             if (len(history) == 0 or float(history[len(history) - 1]['close_price']) > price_cap):
-    #                 if stock in stock_array_copy:
-    #                     stock_array_copy.remove(stock)
-    #                     removed = True
-    #                     if (len(history) == 0):
-    #                         print(stock + " removed from auto-invest because it has no stock history to analyze.")
-    #                     else:
-    #                         print(stock + " removed from auto-invest because its price of " + str(float(history[len(history) - 1]['close_price'])) + " was greater than your price cap of " + str(price_cap))
-
-    #     if (invest):
-    #         stock_array = stock_array_copy
-
-    #         # Lowest price.
-    #         # symbol_and_price = find_symbol_with_lowest_price(stock_array)
-    #         # selected_symbol = symbol_and_price[0]
-    #         # lowest_price = symbol_and_price[1]
-    #         # message = "Auto-Invest is adding " + selected_symbol + " at ${:.2f}".format(lowest_price) + " to the " + watch_list_name + " watchlist."
-
-    #         # Greatest slope for today.
-    #         selected_symbol = find_symbol_with_greatest_slope(stock_array)
-
-    #         # Highest volume.
-    #         # selected_symbol = find_symbol_with_highest_volume(stock_array)
-            
-    #         if(selected_symbol == ''):
-    #             return
-
-    #         message = "Auto-Invest is adding " + selected_symbol + " to the " + watch_list_name + " watchlist."
-    #         send_text(message)
-    #         print(message)
-    #         if not debug:
-    #             r.post_symbols_to_watchlist(selected_symbol, watch_list_name)
-
-    # except IOError as e:
-    #     print(e)
-    #     print(sys.exc_info()[0])
-    # except ValueError:
-    #     print("Could not convert data to an integer.")
-    # except Exception as e:
-    #     print("Unexpected error could not generate interesting stocks report:", str(e))
-
-    #     login_to_sms()
-    #     send_text("Unexpected error could not generate interesting stocks report:" + str(e) + "\n Trace: " + traceback.print_exc())
-    #     # send_text("Unexpected error could not generate interesting stocks report:" + str(e))
-
 def find_symbol_with_greatest_slope(stock_array):
     linregressResults = []
     for stockTicker in stock_array:
@@ -674,7 +382,6 @@ def find_symbol_with_greatest_slope(stock_array):
         i = 0
         for history_item in history:
             closingPrices.append(float(history_item['close_price']))
-            # dates.append(history_item['begins_at'])
             i = i + 1
             dates.append(i)
         # Determine slopes.
@@ -762,7 +469,6 @@ def order_symbols_by_slope(portfolio_symbols):
             i = 0
             for history_item in history:
                 closingPrices.append(float(history_item['close_price']))
-                # dates.append(history_item['begins_at'])
                 i = i + 1
                 dates.append(i)
             # Determine slopes.
@@ -833,16 +539,12 @@ def scan_stocks():
                 # entering multiple orders of the same stock if the order has not yet between
                 # filled.
                 if(len(open_stock_orders) == 0):
-                    # day_trades = r.get_day_trades()['equity_day_trades']
-                    # if len(day_trades) <= 1:
-                        if (not isInExclusionList(symbol)):
-                            send_text("Attempting to sell " + symbol)
-                            sell_holdings(symbol, holdings_data)
-                            sells.append(symbol)
-                        else:
-                            print("Unable to sell " + symbol + " is in the exclusion list.")
-                    # else:
-                    #     print("Unable to sell " + symbol + " because there are " + str(len(day_trades)) + " day trades.")
+                    if (not isInExclusionList(symbol)):
+                        send_text("Attempting to sell " + symbol)
+                        sell_holdings(symbol, holdings_data)
+                        sells.append(symbol)
+                    else:
+                        print("Unable to sell " + symbol + " is in the exclusion list.")
                 else:
                     print("Unable to sell " + symbol + " because there are open stock orders.")
         profile_data = r.build_user_profile()
@@ -876,11 +578,7 @@ def scan_stocks():
                                 if(not (timenow >= begin_time and timenow < end_time) or 
                                 (timenow >= begin_time and timenow < end_time  and not market_uptrend and not only_invest_when_stock_market_is_closed) or
                                 (weekno > 4)):
-                                # day_trades = r.get_day_trades()['equity_day_trades']
-                                # if len(day_trades) <= 1:
                                     potential_buys.append(symbol)
-                                # else:
-                                #     print("Unable to buy " + symbol + " because there are " + str(len(day_trades)) + " day trades.")
                                 else:
                                     print("Unable to buy during while the stock market is open or when the stock market is open but is in an uptrend or if today is not the weekend.")
                             else:
@@ -891,20 +589,6 @@ def scan_stocks():
                         print("But there are " + str(len(open_stock_orders)) + " current pending orders.")
         if(len(potential_buys) > 0):
             buy_holdings_succeeded = buy_holdings(potential_buys, profile_data, holdings_data)
-            # if buy_holdings_succeeded:
-            #     new_holdings = get_modified_holdings()
-                # Trade history has been commented out because it seems to be error prone.
-                # update_trade_history(potential_buys, new_holdings, trade_history_file_name)
-        # if(len(sells) > 0):
-            # Trade history has been commented out because it seems to be error prone.
-            # update_trade_history(sells, holdings_data, trade_history_file_name)
-
-        # Get the metrics report.
-        # get_accurate_gains(portfolio_symbols, watchlist_symbols)
-
-        # Remove all from watchlist_symbols if Friday evening.
-        # if(reset_watchlist):
-        #     remove_watchlist_symbols(watchlist_symbols)
         
         print("----- Scan over -----\n")
 
