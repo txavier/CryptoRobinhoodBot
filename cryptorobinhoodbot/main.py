@@ -280,6 +280,8 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
     pheonix_account = r.load_phoenix_account()
     cash = float(pheonix_account['withdrawable_cash']['amount'])
     portfolio_value = float(profile_data.get('equity')) - cash
+    # cash = float(pheonix_account['uninvested_cash']['amount'])
+    # portfolio_value = float(pheonix_account['total_equity']['amount']) - cash
     buying_power = pheonix_account['account_buying_power']['amount']
 
     # Set the limit on how much crypto we're buying.
@@ -323,6 +325,30 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
         send_text(message)
     return order_placed
 
+def is_crypto_market_in_uptrend():
+    # If Bitcoin and any combination of Ethereum, Litecoin, BCH then the crypto market is in an uptrend.
+    bitcoin_cross = golden_cross('BTC', n1=9, n2=21, days=1, direction="above")
+
+    if(not bitcoin_cross):
+        return 0
+    
+    symbol_array = ['BCH', 'LTC', 'ETH']
+    uptrend_count = 0
+    for symbol in symbol_array:
+        cross = golden_cross(symbol, n1=9, n2=21, days=1, direction="above")
+        if cross:
+            print("The " + symbol + " is in an uptrend.")
+            uptrend_count = uptrend_count + 1
+        if uptrend_count == 2:
+            break
+
+    if uptrend_count >= 2:
+        print("The crypto market is in an uptrend.")
+        return 1
+    else:
+        print("The crypto market is in an downtrend.")
+        return 0
+
 def is_market_in_uptrend():
     stockTickerNdaq = 'NDAQ'
     stockTickerDow = 'DIA'
@@ -335,18 +361,24 @@ def is_market_in_uptrend():
     today_history = r.get_stock_historicals(stockTickerNdaq, interval='5minute', span='day', bounds='regular')    
     if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
         uptrendNdaq = True
+        print("The NASDAQ is in an uptrend.")
     # DOW
     # Using Dow as the market uptrend indicator.
     today_history = r.get_stock_historicals(stockTickerDow, interval='5minute', span='day', bounds='regular')    
     if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
         uptrendDow = True
+        print("The DOW is in an uptrend.")
     # S&P Index
     # Using S&P as the market uptrend indicator.
     today_history = r.get_stock_historicals(stockTickerSP, interval='5minute', span='day', bounds='regular')    
     if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
         uptrendSp = True
+        print("The S&P is in an uptrend.")
     
     result = (uptrendNdaq + uptrendDow + uptrendSp) >= 2
+    if result:
+        print("The stock market is in an uptrend.")
+
     return result
 
 def sudden_drop(symbol, percent, hours_apart):
@@ -477,9 +509,10 @@ def order_symbols_by_slope(portfolio_symbols):
         sorted_matrix = sorted(Matrix, key=lambda l:l[1], reverse=True)
         result_matrix = [[0 for x in range(2)] for y in range(0)]
         for row in sorted_matrix:
-            # Only return rows that have a positive slope. We dont need to invest 
-            # in stocks that have a negative slope in the current trading day.
-            if row[1] > 0.0008:
+            # Only return rows that have a positive slope if there is enough day data, meaning if 
+            # the time is after 9am. We dont need to invest in stocks that have a negative slope 
+            # in the current trading day if we have enough data on that day.
+            if row[1] > 0.0008 or datetime.datetime.now().hour < 9:
                 result_matrix.append(row)
 
         just_first_column = [row[0] for row in result_matrix]
@@ -527,8 +560,11 @@ def scan_stocks():
         sells = []
         print("Current Portfolio: " + str(portfolio_symbols) + "\n")
         print("Current Watchlist: " + str(watchlist_symbols) + "\n")
-        print("----- Scanning portfolio for cryptos to sell -----\n")
         market_uptrend = is_market_in_uptrend()
+        crypto_market_uptrend = is_crypto_market_in_uptrend()
+        # print_market_status(market_uptrend, crypto_market_uptrend)
+
+        print("----- Scanning portfolio for cryptos to sell -----\n")
         open_stock_orders = []
         for symbol in portfolio_symbols:
             is_sudden_drop = sudden_drop(symbol, 10, 2) or sudden_drop(symbol, 15, 1)
@@ -578,9 +614,12 @@ def scan_stocks():
                                 if(not (timenow >= begin_time and timenow < end_time) or 
                                 (timenow >= begin_time and timenow < end_time  and not market_uptrend and not only_invest_when_stock_market_is_closed) or
                                 (weekno > 4)):
-                                    potential_buys.append(symbol)
+                                    if (crypto_market_uptrend):
+                                        potential_buys.append(symbol)
+                                    else:
+                                        print("But the crypto market is not in an uptrend.")
                                 else:
-                                    print("Unable to buy during while the stock market is open or when the stock market is open but is in an uptrend or if today is not the weekend.")
+                                    print("Unable to buy while the stock market is open or when the stock market is open but is in an uptrend or if today is not the weekend.")
                             else:
                                 print("But the price is lower than it was 25 minutes ago.")
                         else:
