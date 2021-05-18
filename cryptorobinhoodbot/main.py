@@ -1,4 +1,5 @@
 import robin_stocks as r
+import robin_stocks.robinhood as rr
 import pandas as pd
 import numpy as np
 import ta as t
@@ -15,9 +16,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from scipy.stats import linregress
 
+# Log in to Robinhood
+# Put your username and password in a config.py file in the same directory (see sample file)
+login = rr.login(rh_username, rh_password)
+
 # Safe divide by zero division function
-
-
 def safe_division(n, d):
     return n / d if d else 0
 
@@ -51,7 +54,7 @@ def isInExclusionList(symbol):
     """
     result = False
     if use_exclusion_watchlist:
-        exclusion_list = r.get_watchlist_by_name(name=auto_invest_exclusion_watchlist)
+        exclusion_list = rr.get_watchlist_by_name(name=auto_invest_exclusion_watchlist)
     for exclusion_item in exclusion_list['results']:
             if exclusion_item['symbol'] == symbol:
                 result = True
@@ -65,10 +68,10 @@ def get_watchlist_symbols():
     """
     exclusion_list = []
     symbols = []
-    list = r.get_watchlist_by_name(name=watch_list_name)
+    list = rr.get_watchlist_by_name(name=watch_list_name)
     # Remove any exclusions.
     if use_exclusion_watchlist:
-        exclusion_list = r.get_watchlist_by_name(name=auto_invest_exclusion_watchlist)
+        exclusion_list = rr.get_watchlist_by_name(name=auto_invest_exclusion_watchlist)
     skip = False
     for item in list['results']:
         for exclusion_item in exclusion_list['results']:
@@ -90,7 +93,7 @@ def get_portfolio_symbols():
     Returns: the symbol for each stock in your portfolio as a list of strings
     """
     symbols = []
-    holdings_data = r.get_crypto_positions()
+    holdings_data = rr.get_crypto_positions()
     for item in holdings_data:
         if not item:
             continue
@@ -116,7 +119,7 @@ def remove_watchlist_symbols(watchlist_symbols):
           
     if(timenow >= begin_time and timenow < end_time and datetime.datetime.today().weekday() == 4):
         print("----- Removing all of this weeks stocks from watchlist -----")
-        result = r.delete_symbols_from_watchlist(watchlist_symbols, name = watch_list_name)
+        result = rr.delete_symbols_from_watchlist(watchlist_symbols, name = watch_list_name)
         return result
 
 
@@ -125,12 +128,12 @@ def get_position_creation_date(symbol, holdings_data):
 
     Args:
         symbol(str): Symbol of the stock that we are trying to figure out when it was bought
-        holdings_data(dict): dict returned by r.get_current_positions()
+        holdings_data(dict): dict returned by rr.get_current_positions()
 
     Returns:
         A string containing the date and time the stock was bought, or "Not found" otherwise
     """
-    instrument = r.get_instruments_by_symbols(symbol)
+    instrument = rr.get_instruments_by_symbols(symbol)
     url = instrument[0].get('url')
     for dict in holdings_data:
         if(dict.get('instrument') == url):
@@ -139,20 +142,20 @@ def get_position_creation_date(symbol, holdings_data):
 
 
 def get_modified_holdings():
-    """ Retrieves the same dictionary as r.build_holdings, but includes data about
+    """ Retrieves the same dictionary as rr.build_holdings, but includes data about
         when the stock was purchased, which is useful for the read_trade_history() method
         in tradingstats.py
 
     Returns:
-        the same dict from r.build_holdings, but with an extra key-value pair for each
+        the same dict from rr.build_holdings, but with an extra key-value pair for each
         position you have, which is 'bought_at': (the time the stock was purchased)
     """
-    holdings_data = r.get_crypto_positions()
+    holdings_data = rr.get_crypto_positions()
     
     return holdings_data
 
 
-def get_last_crossing(df, days, symbol="", direction=""):
+def get_last_crossing(df, days, symbol="", direction="", show_output=1):
     """Searches for a crossing between two indicators for a given stock
 
     Args:
@@ -191,12 +194,13 @@ def get_last_crossing(df, days, symbol="", direction=""):
             last_crossing_report = symbol + ": Short SMA crossed" + (" ABOVE " if recentDiff else " BELOW ") + "Long SMA at " + str(dates.at[found]) + ", which was " + str(
                 pd.Timestamp("now", tz='UTC') - dates.at[found]) + " ago", ", price at cross: " + str(prices.at[found]) + ", current price: " + str(prices.at[lastIndex])
 
-            print(last_crossing_report)
+            if (show_output):
+                print(last_crossing_report)
         return (1 if recentDiff else -1), prices.at[found], prices.at[lastIndex]
     else:
         return 0,0,0
 
-def golden_cross(stockTicker, n1, n2, days, direction=""):
+def golden_cross(stockTicker, n1, n2, days, direction="", show_output=1):
     """Determine if a golden/death cross has occured for a specified stock in the last X trading days
 
     Args:
@@ -217,7 +221,7 @@ def golden_cross(stockTicker, n1, n2, days, direction=""):
     """ Apparently 5 year historicals are no longer available with hourly intervals.  Only with day intervals now.
     """
 
-    history = r.get_crypto_historicals(stockTicker, interval='5minute', span='day')
+    history = rr.get_crypto_historicals(stockTicker, interval='5minute', span='day')
     closingPrices = []
     dates = []
     for history_item in history:
@@ -232,7 +236,7 @@ def golden_cross(stockTicker, n1, n2, days, direction=""):
     series = [price.rename("Price"), sma1.rename(
         "Indicator1"), sma2.rename("Indicator2"), dates.rename("Dates")]
     df = pd.concat(series, axis=1)
-    cross = get_last_crossing(df, days, symbol=stockTicker, direction=direction)
+    cross = get_last_crossing(df, days, symbol=stockTicker, direction=direction, show_output=show_output)
     
     if(plot):
         show_plot(price, sma1, sma2, dates, symbol=stockTicker,
@@ -254,11 +258,10 @@ def sell_holdings(symbol, holdings_data):
         if (symbol == item["currency"]["code"]):
             shares_owned = int(float(item["quantity"]))
     if not debug:
-        r.order_sell_crypto_by_quantity(symbol, shares_owned)
+        rr.order_sell_crypto_by_quantity(symbol, shares_owned)
     print("####### Selling " + str(shares_owned) +
           " shares of " + symbol + " #######")
     send_text("SELL: \nSelling " + str(shares_owned) + " shares of " + symbol)
-
 
 def buy_holdings(potential_buys, profile_data, holdings_data):
     """ Places orders to buy holdings of stocks. This method will try to order
@@ -270,64 +273,43 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
     Args:
         potential_buys(list): List of strings, the strings are the symbols of stocks we want to buy
         symbol(str): Symbol of the stock we want to sell
-        holdings_data(dict): dict obtained from r.build_holdings() or get_modified_holdings() method
+        holdings_data(dict): dict obtained from rr.build_holdings() or get_modified_holdings() method
 
     Returns: 
         False if order has not been placed because there was not enough buying power.
     """
-    # The below line was commented out and replaced because it inexplicably started 
-    # returning seeminly random negative numbers.
-    pheonix_account = r.load_phoenix_account()
-    cash = float(pheonix_account['withdrawable_cash']['amount'])
+    cash = float(profile_data.get('cash'))
     portfolio_value = float(profile_data.get('equity')) - cash
-    # cash = float(pheonix_account['uninvested_cash']['amount'])
-    # portfolio_value = float(pheonix_account['total_equity']['amount']) - cash
-    buying_power = pheonix_account['account_buying_power']['amount']
-
-    # Set the limit on how much crypto we're buying.
-    if (investment_limit_enabled and float(buying_power) > float(investment_limit)):
-        buying_power = investment_limit
-        
-    portfolio_value = float(buying_power) - cash
-
-    order_placed = False
-    len_potential_buys = len(potential_buys)
+    ideal_position_size = (safe_division(portfolio_value, len(holdings_data))+cash/len(potential_buys))/(2 * len(potential_buys))
     for i in range(0, len(potential_buys)):
-        prices = r.get_crypto_quote(potential_buys[i])
-        ideal_position_size = (safe_division(portfolio_value, len(
-            holdings_data))+cash/len_potential_buys)/(2 * len_potential_buys)
+        prices = rr.get_crypto_quote(potential_buys[i])
         stock_price = float(prices['ask_price'])
-        if (float(buying_power) < ideal_position_size):
-            output = "####### Tried buying " + str(float(ideal_position_size/stock_price)) + " or more shares of " + potential_buys[i] + " at ${:.2f}".format(stock_price) + " however your account balance of ${:.2f}".format(float(buying_power)) + " is not enough buying power to purchase at the ideal buying position size of " + str(ideal_position_size) + ". #######"
-            print(output)
-            len_potential_buys = len_potential_buys - 1
-            continue
-        elif(ideal_position_size < stock_price < ideal_position_size*1.5):
+        if(ideal_position_size < stock_price < ideal_position_size*1.5):
             num_shares = int(ideal_position_size*1.5/stock_price)
         elif (stock_price < ideal_position_size):
             num_shares = int(ideal_position_size/stock_price)
         else:
-            output = "####### Tried buying " + str(float(ideal_position_size/stock_price)) + " or more shares of " + potential_buys[i] + " at ${:.2f}".format(stock_price) + ", but not enough buying power at ${:.2f}".format(float(buying_power)) + " to do so. #######"
-            print(output)
-            # send_text(output)
-            len_potential_buys = len_potential_buys - 1
-            continue
-        print("####### Buying " + str(num_shares) +
-              " shares of " + potential_buys[i] + " #######")
+            output = "####### Tried buying " + str(float(ideal_position_size/stock_price)) + " or more shares of " + potential_buys[i] + " at ${:.2f}".format(stock_price) + " however your account balance of ${:.2f}".format(cash) + " is not enough buying power to purchase at the ideal buying position size. #######"
 
-        message = "BUY: \nBuying " + str(num_shares) + " shares of " + potential_buys[i]
+            print(output)
+            send_text(output)
+
+            break
+
+        print("####### Buying " + str(num_shares) +
+                " shares of " + potential_buys[i] + " at " + str(stock_price) + " #######")
+
+        message = "BUY: \nBuying " + str(num_shares) + " shares of " + potential_buys[i] + " at " + str(stock_price)
 
         if not debug:
-            result = r.order_buy_crypto_by_quantity(potential_buys[i], num_shares)
+            result = rr.order_buy_crypto_by_quantity(potential_buys[i], num_shares)
             if 'detail' in result:
                 message = message +  ". The result is " + result['detail']
-        order_placed = True
         send_text(message)
-    return order_placed
 
 def is_crypto_market_in_uptrend():
     # If Bitcoin and any combination of Ethereum, Litecoin, BCH then the crypto market is in an uptrend.
-    bitcoin_cross = golden_cross('BTC', n1=9, n2=21, days=1, direction="above")
+    bitcoin_cross = golden_cross('BTC', n1=9, n2=21, days=1, direction="above", show_output=0)
 
     if(not bitcoin_cross):
         return 0
@@ -335,7 +317,7 @@ def is_crypto_market_in_uptrend():
     symbol_array = ['BCH', 'LTC', 'ETH']
     uptrend_count = 0
     for symbol in symbol_array:
-        cross = golden_cross(symbol, n1=9, n2=21, days=1, direction="above")
+        cross = golden_cross(symbol, n1=9, n2=21, days=1, direction="above", show_output=0)
         if cross:
             print("The " + symbol + " is in an uptrend.")
             uptrend_count = uptrend_count + 1
@@ -358,19 +340,19 @@ def is_market_in_uptrend():
     uptrendSp = False
     # Nasdaq
     # Using NasDaq as the market uptrend indicator which does not have extended trading hours.
-    today_history = r.get_stock_historicals(stockTickerNdaq, interval='5minute', span='day', bounds='regular')    
+    today_history = rr.get_stock_historicals(stockTickerNdaq, interval='5minute', span='day', bounds='regular')    
     if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
         uptrendNdaq = True
         print("The NASDAQ is in an uptrend.")
     # DOW
     # Using Dow as the market uptrend indicator.
-    today_history = r.get_stock_historicals(stockTickerDow, interval='5minute', span='day', bounds='regular')    
+    today_history = rr.get_stock_historicals(stockTickerDow, interval='5minute', span='day', bounds='regular')    
     if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
         uptrendDow = True
         print("The DOW is in an uptrend.")
     # S&P Index
     # Using S&P as the market uptrend indicator.
-    today_history = r.get_stock_historicals(stockTickerSP, interval='5minute', span='day', bounds='regular')    
+    today_history = rr.get_stock_historicals(stockTickerSP, interval='5minute', span='day', bounds='regular')    
     if(float(today_history[0]['open_price']) < float(today_history[len(today_history) - 1]['close_price'])):
         uptrendSp = True
         print("The S&P is in an uptrend.")
@@ -378,7 +360,8 @@ def is_market_in_uptrend():
     result = (uptrendNdaq + uptrendDow + uptrendSp) >= 2
     if result:
         print("The stock market is in an uptrend.")
-
+    else:
+        print("The stock market is in a downtrend.")
     return result
 
 def sudden_drop(symbol, percent, hours_apart):
@@ -392,7 +375,7 @@ def sudden_drop(symbol, percent, hours_apart):
     Returns:
         True if there is a sudden drop.
     """
-    historicals = r.get_crypto_historicals(symbol, interval='5minute', span='day')
+    historicals = rr.get_crypto_historicals(symbol, interval='5minute', span='day')
     percentage = (percent/100) * float(historicals[len(historicals) - 1 - hours_apart]['close_price'])
     target_price = float(historicals[len(historicals) - 1 - hours_apart]['close_price']) - percentage
 
@@ -408,7 +391,7 @@ def find_symbol_with_greatest_slope(stock_array):
     linregressResults = []
     for stockTicker in stock_array:
         # Load stock numbers.
-        history = r.get_stock_historicals(stockTicker, interval='5minute', span='day', bounds='regular')
+        history = rr.get_stock_historicals(stockTicker, interval='5minute', span='day', bounds='regular')
         closingPrices = []
         dates = []
         i = 0
@@ -431,7 +414,7 @@ def find_symbol_with_greatest_slope(stock_array):
 def find_symbol_with_highest_volume(stock_array):
     volume_array = []
     for stock in stock_array:
-        volumes = r.get_stock_historicals(stock, interval='day', span='week', bounds='regular', info='volume')
+        volumes = rr.get_stock_historicals(stock, interval='day', span='week', bounds='regular', info='volume')
         if len(volumes) == 0:
             continue
         volume_array.append(volumes[len(volumes) - 1])
@@ -446,7 +429,7 @@ def find_symbol_with_highest_volume(stock_array):
 
 def find_stock_with_lowest_price(stock_array):
     # Find stock with the lowest stock price.
-    price_array = r.get_latest_price(stock_array)
+    price_array = rr.get_latest_price(stock_array)
     stock_and_price_float_array = [float(i) for i in price_array]
     sorted_price_array = sorted(stock_and_price_float_array, key=float)
     lowest_price = sorted_price_array[0]
@@ -463,7 +446,7 @@ def get_market_tag_stocks_report():
         stock_array = []
 
         for market_tag_for_report_item in market_tag_for_report_array:
-            all_market_tag_stocks = r.get_all_stocks_from_market_tag(market_tag_for_report_item, info = 'symbol')
+            all_market_tag_stocks = rr.get_all_stocks_from_market_tag(market_tag_for_report_item, info = 'symbol')
             print(market_tag_for_report_item + str(len(all_market_tag_stocks)))
             for market_tag_stock in all_market_tag_stocks:
                 cross = golden_cross(market_tag_stock, n1=9, n2=21, days=1, direction="above")
@@ -487,6 +470,25 @@ def get_market_tag_stocks_report():
         send_text(
             "Unexpected error could not generate interesting stocks report:" + str(e) + "\n Trace: " + traceback.print_exc())
 
+def build_pheonix_profile_data(profile_data_with_dividend):
+    """Builds a dictionary of important information regarding the user account.
+
+    :returns: Returns a dictionary that has total equity, extended hours equity, cash, and divendend total.
+
+    """
+    profile_data = {}
+
+    pheonix_account = rr.load_phoenix_account()
+
+    profile_data['equity'] = pheonix_account['total_equity']['amount']
+    if (pheonix_account['total_extended_hours_equity']):
+        profile_data['extended_hours_equity'] = pheonix_account['total_extended_hours_equity']['amount']
+    profile_data['cash'] = pheonix_account['uninvested_cash']['amount']
+
+    profile_data['dividend_total'] = profile_data_with_dividend['dividend_total']
+
+    return profile_data
+
 def order_symbols_by_slope(portfolio_symbols):
     """ This method orders an array of symbols by their slope in descending order
     """ 
@@ -495,7 +497,7 @@ def order_symbols_by_slope(portfolio_symbols):
         Matrix = [[0 for x in range(w)] for y in range(h)] 
         for stockTicker in portfolio_symbols:
             # Load stock numbers.
-            history = r.get_crypto_historicals(stockTicker, interval='5minute', span='day')
+            history = rr.get_crypto_historicals(stockTicker, interval='5minute', span='day')
             closingPrices = []
             dates = []
             i = 0
@@ -542,10 +544,6 @@ def scan_stocks():
     """
 
     try:
-
-        # Log in to Robinhood
-        # Put your username and password in a config.py file in the same directory (see sample file)
-        login = r.login(rh_username, rh_password)
         login_to_sms()
 
         if debug:
@@ -570,7 +568,7 @@ def scan_stocks():
             is_sudden_drop = sudden_drop(symbol, 10, 2) or sudden_drop(symbol, 15, 1)
             cross = golden_cross(symbol, n1=9, n2=21, days=1, direction="below")
             if(cross[0] == -1 or is_sudden_drop):
-                open_stock_orders = r.get_all_open_crypto_orders()
+                open_stock_orders = rr.get_all_open_crypto_orders()
                 # If there are any open stock orders then dont buy more.  This is to avoid 
                 # entering multiple orders of the same stock if the order has not yet between
                 # filled.
@@ -583,14 +581,15 @@ def scan_stocks():
                         print("Unable to sell " + symbol + " is in the exclusion list.")
                 else:
                     print("Unable to sell " + symbol + " because there are open stock orders.")
-        profile_data = r.build_user_profile()
+        profile_data_with_dividend_total = rr.build_user_profile()
+        profile_data = build_pheonix_profile_data(profile_data_with_dividend_total)
         ordered_watchlist_symbols = order_symbols_by_slope(watchlist_symbols)
         print("\n----- Scanning watchlist for cryptos to buy -----\n")
         for symbol in ordered_watchlist_symbols:
             if(symbol not in portfolio_symbols):
                 cross = golden_cross(symbol, n1=9, n2=21, days=1, direction="above")
                 if(cross[0] == 1):
-                    open_stock_orders = r.get_all_open_crypto_orders()
+                    open_stock_orders = rr.get_all_open_crypto_orders()
                     # If there are any open stock orders then dont buy more.  This is to avoid 
                     # entering multiple orders of the same stock if the order has not yet between
                     # filled.
