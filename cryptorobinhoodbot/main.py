@@ -191,7 +191,7 @@ def get_last_crossing(df, days, symbol="", direction="", show_output=1):
         index -= 1
     if(found != lastIndex):
         if((direction == "above" and recentDiff) or (direction == "below" and not recentDiff)):
-            last_crossing_report = symbol + ": Short SMA crossed" + (" ABOVE " if recentDiff else " BELOW ") + "Long SMA at " + str(dates.at[found]) + ", which was " + str(
+            last_crossing_report = symbol + ": EMA crossed" + (" ABOVE " if recentDiff else " BELOW ") + "Long SMA at " + str(dates.at[found]) + ", which was " + str(
                 pd.Timestamp("now", tz='UTC') - dates.at[found]) + " ago", ", price at cross: " + str(prices.at[found]) + ", current price: " + str(prices.at[lastIndex])
 
             if (show_output):
@@ -290,16 +290,13 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
             num_shares = int(ideal_position_size/stock_price)
         else:
             output = "####### Tried buying " + str(float(ideal_position_size/stock_price)) + " or more shares of " + potential_buys[i] + " at ${:.2f}".format(stock_price) + " however your account balance of ${:.2f}".format(cash) + " is not enough buying power to purchase at the ideal buying position size. #######"
-
             print(output)
-            send_text(output)
-
             break
 
         print("####### Buying " + str(num_shares) +
-                " shares of " + potential_buys[i] + " at " + str(stock_price) + " #######")
+                " shares of " + potential_buys[i] + " at " + str(stock_price) + " with ${:.2f}".format(cash) + " in cash. #######")
 
-        message = "BUY: \nBuying " + str(num_shares) + " shares of " + potential_buys[i] + " at " + str(stock_price)
+        message = "BUY: \nBuying " + str(num_shares) + " shares of " + potential_buys[i] + " at " + str(stock_price) + " with ${:.2f}".format(cash) 
 
         if not debug:
             result = rr.order_buy_crypto_by_quantity(potential_buys[i], num_shares)
@@ -309,15 +306,17 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
 
 def is_crypto_market_in_uptrend():
     # If Bitcoin and any combination of Ethereum, Litecoin, BCH then the crypto market is in an uptrend.
-    bitcoin_cross = golden_cross('BTC', n1=9, n2=21, days=1, direction="above", show_output=0)
+    bitcoin_cross = golden_cross('BTC', n1=50, n2=100, days=1, direction="above", show_output=0)
 
     if(not bitcoin_cross):
         return 0
     
+    print("The BTC is in an uptrend.")
+
     symbol_array = ['BCH', 'LTC', 'ETH']
     uptrend_count = 0
     for symbol in symbol_array:
-        cross = golden_cross(symbol, n1=9, n2=21, days=1, direction="above", show_output=0)
+        cross = golden_cross(symbol, n1=50, n2=100, days=1, direction="above", show_output=0)
         if cross:
             print("The " + symbol + " is in an uptrend.")
             uptrend_count = uptrend_count + 1
@@ -449,7 +448,7 @@ def get_market_tag_stocks_report():
             all_market_tag_stocks = rr.get_all_stocks_from_market_tag(market_tag_for_report_item, info = 'symbol')
             print(market_tag_for_report_item + str(len(all_market_tag_stocks)))
             for market_tag_stock in all_market_tag_stocks:
-                cross = golden_cross(market_tag_stock, n1=9, n2=21, days=1, direction="above")
+                cross = golden_cross(market_tag_stock, n1=50, n2=100, days=1, direction="above")
                 if(cross[0] == 1):
                     report_string = report_string + "\n" + market_tag_stock + "{:.2f}".format(cross[2])
                     stock_array.append(market_tag_stock)
@@ -560,13 +559,12 @@ def scan_stocks():
         print("Current Watchlist: " + str(watchlist_symbols) + "\n")
         market_uptrend = is_market_in_uptrend()
         crypto_market_uptrend = is_crypto_market_in_uptrend()
-        # print_market_status(market_uptrend, crypto_market_uptrend)
 
         print("----- Scanning portfolio for cryptos to sell -----\n")
         open_stock_orders = []
         for symbol in portfolio_symbols:
             is_sudden_drop = sudden_drop(symbol, 10, 2) or sudden_drop(symbol, 15, 1)
-            cross = golden_cross(symbol, n1=9, n2=21, days=1, direction="below")
+            cross = golden_cross(symbol, n1=50, n2=100, days=1, direction="below")
             if(cross[0] == -1 or is_sudden_drop):
                 open_stock_orders = rr.get_all_open_crypto_orders()
                 # If there are any open stock orders then dont buy more.  This is to avoid 
@@ -574,7 +572,7 @@ def scan_stocks():
                 # filled.
                 if(len(open_stock_orders) == 0):
                     if (not isInExclusionList(symbol)):
-                        send_text("Attempting to sell " + symbol)
+                        # send_text("Attempting to sell " + symbol)
                         sell_holdings(symbol, holdings_data)
                         sells.append(symbol)
                     else:
@@ -587,7 +585,7 @@ def scan_stocks():
         print("\n----- Scanning watchlist for cryptos to buy -----\n")
         for symbol in ordered_watchlist_symbols:
             if(symbol not in portfolio_symbols):
-                cross = golden_cross(symbol, n1=9, n2=21, days=1, direction="above")
+                cross = golden_cross(symbol, n1=50, n2=100, days=1, direction="above")
                 if(cross[0] == 1):
                     open_stock_orders = rr.get_all_open_crypto_orders()
                     # If there are any open stock orders then dont buy more.  This is to avoid 
