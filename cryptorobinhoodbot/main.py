@@ -609,16 +609,17 @@ def scan_stocks():
 
                                 # If we are outside of market hours or if we are in market
                                 # hours but the stock market is not in an uptrend or 
-                                # if today is the weekend.
-                                if(not (timenow >= begin_time and timenow < end_time) or 
+                                # if today is the weekend or if this bot is not in tandem mode.
+                                if((not (timenow >= begin_time and timenow < end_time) or 
                                 (timenow >= begin_time and timenow < end_time  and not market_uptrend and not only_invest_when_stock_market_is_closed) or
-                                (weekno > 4)):
+                                (weekno > 4))
+                                or (not tandem_mode)):
                                     if (crypto_market_uptrend):
                                         potential_buys.append(symbol)
                                     else:
                                         print("But the crypto market is not in an uptrend.")
                                 else:
-                                    print("Unable to buy while the stock market is open or when the stock market is open but is in an uptrend or if today is not the weekend.")
+                                    print("Unable to buy while the stock market is open or when the stock market is open but is in an uptrend or if today is not the weekend or this bot is not in tandem mode.")
                             else:
                                 print("But the price is lower than it was 25 minutes ago.")
                         else:

@@ -32,3 +32,5 @@ investment_limit_enabled=False
 investment_limit=100
 # Only invest when the stock market is not in an uptrend or is closed.
 only_invest_when_stock_market_is_closed=False
+# Work in tandem with stock market bot i.e. market hours, stock market uptrend etc.
+tandem_mode=False
