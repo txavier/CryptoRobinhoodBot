@@ -284,19 +284,36 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
     for i in range(0, len(potential_buys)):
         prices = rr.get_crypto_quote(potential_buys[i])
         stock_price = float(prices['ask_price'])
-        if(ideal_position_size < stock_price < ideal_position_size*1.5):
+        if ((stock_price * int(ideal_position_size/stock_price)) > cash):
+            num_shares = int(ideal_position_size/stock_price)
+            output = "Tried buying " + str(num_shares) + " shares of " + potential_buys[i] + " at " + str(stock_price) + " costing ${:.2f}".format(stock_price * num_shares) + " but with only ${:.2f}".format(cash) + " in cash not enough to make this purchase."
+            print(output)
+            if (len(potential_buys) > 1):
+                ideal_position_size = (safe_division(portfolio_value, len(holdings_data))+cash/(len(potential_buys)-1))/(2 * (len(potential_buys)-1))
+            continue
+        elif ((stock_price * int(ideal_position_size*1.5/stock_price)) > cash):
+            num_shares = int(ideal_position_size*1.5/stock_price)
+            output = "Tried buying " + str(num_shares) + " shares of " + potential_buys[i] + " at " + str(stock_price) + " costing ${:.2f}".format(stock_price * num_shares) + " but with only ${:.2f}".format(cash) + " in cash not enough to make this purchase."
+            print(output)
+            if (len(potential_buys) > 1):
+                ideal_position_size = (safe_division(portfolio_value, len(holdings_data))+cash/(len(potential_buys)-1))/(2 * (len(potential_buys)-1))
+            continue
+        elif(ideal_position_size < stock_price < ideal_position_size*1.5):
             num_shares = int(ideal_position_size*1.5/stock_price)
         elif (stock_price < ideal_position_size):
             num_shares = int(ideal_position_size/stock_price)
         else:
-            output = "####### Tried buying " + str(float(ideal_position_size/stock_price)) + " or more shares of " + potential_buys[i] + " at ${:.2f}".format(stock_price) + " however your account balance of ${:.2f}".format(cash) + " is not enough buying power to purchase at the ideal buying position size. #######"
+            num_shares = float(ideal_position_size*1.5/stock_price)
+            output = "####### Tried buying " + str(float(ideal_position_size/stock_price)) + " or more shares of " + potential_buys[i] + " at ${:.2f}".format(stock_price) + " costing ${:.2f}".format(stock_price * num_shares) + " however your account balance of ${:.2f}".format(cash) + " is not enough buying power to purchase at the ideal buying position size. #######"
             print(output)
-            break
+            if (len(potential_buys) > 1):
+                ideal_position_size = (safe_division(portfolio_value, len(holdings_data))+cash/(len(potential_buys)-1))/(2 * (len(potential_buys)-1))
+            continue
 
         print("####### Buying " + str(num_shares) +
-                " shares of " + potential_buys[i] + " at " + str(stock_price) + " with ${:.2f}".format(cash) + " in cash. #######")
+                         " shares of " + potential_buys[i] + " at " + str(stock_price) + " costing ${:.2f}".format(stock_price * num_shares) +  " with ${:.2f}".format(cash) + " in cash. #######")
 
-        message = "BUY: \nBuying " + str(num_shares) + " shares of " + potential_buys[i] + " at " + str(stock_price) + " with ${:.2f}".format(cash) 
+        message = "BUY: \nBuying " + str(num_shares) + " shares of " + potential_buys[i] + " at " + str(stock_price) + " costing ${:.2f}".format(stock_price * num_shares) + " with ${:.2f}".format(cash) 
 
         if not debug:
             result = rr.order_buy_crypto_by_quantity(potential_buys[i], num_shares)
