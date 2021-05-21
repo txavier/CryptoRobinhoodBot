@@ -488,7 +488,7 @@ def build_pheonix_profile_data(profile_data_with_dividend):
 
     return profile_data
 
-def order_symbols_by_slope(portfolio_symbols):
+def order_symbols_by_lowest_price(portfolio_symbols):
     """ This method orders an array of symbols by their slope in descending order
     """ 
     try:
@@ -506,8 +506,8 @@ def order_symbols_by_slope(portfolio_symbols):
                 dates.append(i)
             # Determine slopes.
             linregressResult = linregress(dates, closingPrices)
-            Matrix.append([stockTicker, linregressResult.slope])
-        sorted_matrix = sorted(Matrix, key=lambda l:l[1], reverse=True)
+            Matrix.append([stockTicker, linregressResult.slope, history[len(history)-1]['close_price']])
+        sorted_matrix = sorted(Matrix, key=lambda l:l[2], reverse=False)
         result_matrix = [[0 for x in range(2)] for y in range(0)]
         for row in sorted_matrix:
             # Only return rows that have a positive slope if there is enough day data, meaning if 
@@ -581,7 +581,7 @@ def scan_stocks():
                     print("Unable to sell " + symbol + " because there are open stock orders.")
         profile_data_with_dividend_total = rr.build_user_profile()
         profile_data = build_pheonix_profile_data(profile_data_with_dividend_total)
-        ordered_watchlist_symbols = order_symbols_by_slope(watchlist_symbols)
+        ordered_watchlist_symbols = order_symbols_by_lowest_price(watchlist_symbols)
         print("\n----- Scanning watchlist for cryptos to buy -----\n")
         for symbol in ordered_watchlist_symbols:
             if(symbol not in portfolio_symbols):
