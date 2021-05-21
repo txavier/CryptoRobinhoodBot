@@ -121,3 +121,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+cryptorobinhoodbot/tradehistory-debug.txt
+cryptorobinhoodbot/tradehistory-real.txt

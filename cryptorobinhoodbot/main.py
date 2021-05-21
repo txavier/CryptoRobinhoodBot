@@ -252,16 +252,19 @@ def sell_holdings(symbol, holdings_data):
         holdings_data(dict): dict obtained from get_modified_holdings() method
     """
     shares_owned = 0
+    result = {}
     for item in holdings_data:
         if not item:
             continue
         if (symbol == item["currency"]["code"]):
             shares_owned = int(float(item["quantity"]))
     if not debug:
-        rr.order_sell_crypto_by_quantity(symbol, shares_owned)
+        result = rr.order_sell_crypto_by_quantity(symbol, shares_owned)
+        
     print("####### Selling " + str(shares_owned) +
           " shares of " + symbol + " #######")
     send_text("SELL: \nSelling " + str(shares_owned) + " shares of " + symbol)
+    return result
 
 def buy_holdings(potential_buys, profile_data, holdings_data):
     """ Places orders to buy holdings of stocks. This method will try to order
@@ -281,6 +284,7 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
     cash = float(profile_data.get('cash'))
     portfolio_value = float(profile_data.get('equity')) - cash
     ideal_position_size = (safe_division(portfolio_value, len(holdings_data))+cash/len(potential_buys))/(2 * len(potential_buys))
+    results = {}
     for i in range(0, len(potential_buys)):
         prices = rr.get_crypto_quote(potential_buys[i])
         stock_price = float(prices['ask_price'])
@@ -315,11 +319,16 @@ def buy_holdings(potential_buys, profile_data, holdings_data):
 
         message = "BUY: \nBuying " + str(num_shares) + " shares of " + potential_buys[i] + " at " + str(stock_price) + " costing ${:.2f}".format(stock_price * num_shares) + " with ${:.2f}".format(cash) 
 
+        result = {}
         if not debug:
             result = rr.order_buy_crypto_by_quantity(potential_buys[i], num_shares)
             if 'detail' in result:
+                print(result['detail'])
                 message = message +  ". The result is " + result['detail']
+        
         send_text(message)
+        results[potential_buys[i]] = result
+    return results
 
 def is_crypto_market_in_uptrend():
     # If Bitcoin and any combination of Ethereum, Litecoin, BCH then the crypto market is in an uptrend.
@@ -572,6 +581,7 @@ def scan_stocks():
         holdings_data = get_modified_holdings()
         potential_buys = []
         sells = []
+        sell_results = {}
         print("Current Portfolio: " + str(portfolio_symbols) + "\n")
         print("Current Watchlist: " + str(watchlist_symbols) + "\n")
         market_uptrend = is_market_in_uptrend()
@@ -590,7 +600,8 @@ def scan_stocks():
                 if(len(open_stock_orders) == 0):
                     if (not isInExclusionList(symbol)):
                         # send_text("Attempting to sell " + symbol)
-                        sell_holdings(symbol, holdings_data)
+                        sell_result = sell_holdings(symbol, holdings_data)
+                        sell_results[symbol] = sell_result
                         sells.append(symbol)
                     else:
                         print("Unable to sell " + symbol + " is in the exclusion list.")
@@ -641,9 +652,18 @@ def scan_stocks():
                             print("But the price is lower than it was when the golden cross formed " + str(cross[2]) + " < " + str(cross[1]))
                     else:
                         print("But there are " + str(len(open_stock_orders)) + " current pending orders.")
+        file_name = trade_history_file_name
+        if debug:
+            file_name = "cryptorobinhoodbot/tradehistory-debug.txt"
+
         if(len(potential_buys) > 0):
-            buy_holdings_succeeded = buy_holdings(potential_buys, profile_data, holdings_data)
-        
+            buy_results = buy_holdings(potential_buys, profile_data, holdings_data)
+            if not debug:
+                update_trade_history(sells, buy_results, file_name)
+        if(len(sells) > 0):
+            if not debug:
+                update_trade_history(sells, sell_results, file_name)
+
         print("----- Scan over -----\n")
 
         # Sign out of the email server.

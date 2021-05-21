@@ -6,7 +6,6 @@ import json
 def update_trade_history(symbols, holdings_data, file_name):
     """ Writes data about a trade to a JSON file, containing the sell date, buy date,
         price at which the stock was bought and sold at, etc.
-
     Args:
         symbols(list): List of strings, strings are the symbols of the stocks we've just sold and want to write data for.
         holdings_data(dict): dict obtained from get_modified_holdings() method. We need this method rather than rr.build_holdings() to get a stock's buying date
@@ -24,7 +23,6 @@ def update_trade_history(symbols, holdings_data, file_name):
 
 def read_trade_history(file_name):
     """ Reads data about previous trades from JSON file and prints it out
-
     Args:
         file_name(str): name of the file we are reading from. Should be "tradehistory.txt" by default
     """
@@ -51,3 +49,4 @@ def get_total_gains_minus_dividends():
     percentDividend = dividends/money_invested*100
     totalGainMinusDividends =float(profileData['extended_hours_equity'])-dividends-money_invested
     return totalGainMinusDividends
+    
