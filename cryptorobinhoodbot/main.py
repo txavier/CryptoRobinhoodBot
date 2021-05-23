@@ -334,7 +334,8 @@ def is_crypto_market_in_uptrend():
     # If Bitcoin and any combination of Ethereum, Litecoin, BCH then the crypto market is in an uptrend.
     bitcoin_cross = golden_cross('BTC', n1=50, n2=100, days=1, direction="above", show_output=0)
 
-    if(not bitcoin_cross):
+    if(not bitcoin_cross[0] == 1):
+        print("The BTC is in a downtrend.")
         return 0
     
     print("The BTC is in an uptrend.")
@@ -343,9 +344,11 @@ def is_crypto_market_in_uptrend():
     uptrend_count = 0
     for symbol in symbol_array:
         cross = golden_cross(symbol, n1=50, n2=100, days=1, direction="above", show_output=0)
-        if cross:
+        if cross[0] == 1:
             print("The " + symbol + " is in an uptrend.")
             uptrend_count = uptrend_count + 1
+        else:
+            print("The " + symbol + " is in an downtrend.")
         if uptrend_count == 2:
             break
 
