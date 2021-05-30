@@ -511,7 +511,7 @@ def build_pheonix_profile_data(profile_data_with_dividend):
     profile_data['equity'] = pheonix_account['total_equity']['amount']
     if (pheonix_account['total_extended_hours_equity']):
         profile_data['extended_hours_equity'] = pheonix_account['total_extended_hours_equity']['amount']
-    profile_data['cash'] = pheonix_account['uninvested_cash']['amount']
+    profile_data['cash'] = pheonix_account['crypto_buying_power']['amount']
 
     profile_data['dividend_total'] = profile_data_with_dividend['dividend_total']
 
