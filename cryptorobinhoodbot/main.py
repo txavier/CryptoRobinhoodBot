@@ -543,6 +543,7 @@ def order_symbols_by_lowest_price(portfolio_symbols):
             # the time is after 9am. We dont need to invest in stocks that have a negative slope 
             # in the current trading day if we have enough data on that day.
             # if row[1] > 0.0008 or datetime.datetime.now().hour < 9:
+            if row[1] > 0.0008:
                 result_matrix.append(row)
 
         just_first_column = [row[0] for row in result_matrix]
