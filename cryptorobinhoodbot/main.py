@@ -663,7 +663,7 @@ def scan_stocks():
         if(len(potential_buys) > 0):
             buy_results = buy_holdings(potential_buys, profile_data, holdings_data)
             if not debug:
-                update_trade_history(sells, buy_results, file_name)
+                update_trade_history(potential_buys, buy_results, file_name)
         if(len(sells) > 0):
             if not debug:
                 update_trade_history(sells, sell_results, file_name)
