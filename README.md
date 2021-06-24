@@ -1,4 +1,4 @@
-# RobinhoodBot
+# RobinhoodBot DO NOT USE THIS BOT IT WILL LOSE MONEY
 Trading bot for Robinhood accounts
 
 For more info:
